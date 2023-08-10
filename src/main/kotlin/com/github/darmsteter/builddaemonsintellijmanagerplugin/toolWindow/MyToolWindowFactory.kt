@@ -1,45 +1,55 @@
 package com.github.darmsteter.builddaemonsintellijmanagerplugin.toolWindow
 
-import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
-import com.github.darmsteter.builddaemonsintellijmanagerplugin.MyBundle
-import com.github.darmsteter.builddaemonsintellijmanagerplugin.services.MyProjectService
-import javax.swing.JButton
-
+import com.sun.management.OperatingSystemMXBean
+import java.lang.management.ManagementFactory
+import java.text.DecimalFormat
+import javax.swing.SwingUtilities
+import kotlin.concurrent.fixedRateTimer
 
 class MyToolWindowFactory : ToolWindowFactory {
-
-    init {
-        thisLogger().warn("Don't forget to remove all non-needed sample code files with their corresponding registration entries in `plugin.xml`.")
-    }
-
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val myToolWindow = MyToolWindow(toolWindow)
-        val content = ContentFactory.getInstance().createContent(myToolWindow.getContent(), null, false)
+        val content = ContentFactory.getInstance()
+            .createContent(myToolWindow.getContent(), "Build Daemons Intellij Manager", false)
         toolWindow.contentManager.addContent(content)
     }
 
-    override fun shouldBeAvailable(project: Project) = true
+    class MyToolWindow(private val toolWindow: ToolWindow) {
+        private val panel = JBPanel<JBPanel<*>>().apply {
+            val totalRAMLabel = JBLabel("Total RAM: ${getTotalRAM()} MB")
+            add(totalRAMLabel)
+        }
 
-    class MyToolWindow(toolWindow: ToolWindow) {
+        init {
+            val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
+            val decimalFormat = DecimalFormat("#.##")
 
-        private val service = toolWindow.project.service<MyProjectService>()
+            val freeRAMLabel = JBLabel()
+            panel.add(freeRAMLabel)
 
-        fun getContent() = JBPanel<JBPanel<*>>().apply {
-            val label = JBLabel(MyBundle.message("randomLabel", "?"))
-
-            add(label)
-            add(JButton(MyBundle.message("shuffle")).apply {
-                addActionListener {
-                    label.text = MyBundle.message("randomLabel", service.getRandomNumber())
+            fixedRateTimer(period = 5000) {
+                val freePhysicalMemorySize = osBean.freePhysicalMemorySize
+                val freeMemoryInMB = freePhysicalMemorySize.toDouble() / (1024 * 1024)
+                val freeRAMText = "Free RAM: ${decimalFormat.format(freeMemoryInMB)} MB"
+                SwingUtilities.invokeLater {
+                    freeRAMLabel.text = freeRAMText
+                    panel.revalidate()
+                    panel.repaint()
                 }
-            })
+            }
+        }
+
+        fun getContent() = panel
+
+        private fun getTotalRAM(): Long {
+            val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
+            return osBean.totalPhysicalMemorySize / (1024 * 1024)
         }
     }
 }
