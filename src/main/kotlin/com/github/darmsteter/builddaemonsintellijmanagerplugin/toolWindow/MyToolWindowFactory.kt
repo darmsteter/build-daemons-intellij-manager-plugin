@@ -3,12 +3,15 @@ package com.github.darmsteter.builddaemonsintellijmanagerplugin.toolWindow
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
 import com.sun.management.OperatingSystemMXBean
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.lang.management.ManagementFactory
 import java.text.DecimalFormat
+import javax.swing.BoxLayout
+import javax.swing.JLabel
+import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import kotlin.concurrent.fixedRateTimer
 
@@ -21,17 +24,22 @@ class MyToolWindowFactory : ToolWindowFactory {
     }
 
     class MyToolWindow(private val toolWindow: ToolWindow) {
-        private val panel = JBPanel<JBPanel<*>>().apply {
-            val totalRAMLabel = JBLabel("Total RAM: ${getTotalRAM()} MB")
-            add(totalRAMLabel)
-        }
+        private val panel = JPanel()
+        private val layout = BoxLayout(panel, BoxLayout.Y_AXIS)
+        private val daemonsLabel = JLabel("Daemons:") // Declare the daemonsLabel here
 
         init {
+            panel.layout = layout
+
             val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
             val decimalFormat = DecimalFormat("#.##")
 
-            val freeRAMLabel = JBLabel()
+            val totalRAMLabel = JLabel("Total RAM: ${getTotalRAM()} MB")
+            val freeRAMLabel = JLabel()
+
+            panel.add(totalRAMLabel)
             panel.add(freeRAMLabel)
+            panel.add(daemonsLabel) // Add the daemonsLabel to the panel
 
             fixedRateTimer(period = 5000) {
                 val freePhysicalMemorySize = osBean.freePhysicalMemorySize
@@ -39,9 +47,27 @@ class MyToolWindowFactory : ToolWindowFactory {
                 val freeRAMText = "Free RAM: ${decimalFormat.format(freeMemoryInMB)} MB"
                 SwingUtilities.invokeLater {
                     freeRAMLabel.text = freeRAMText
-                    panel.revalidate()
-                    panel.repaint()
+                    updateDaemonsInfo()
                 }
+            }
+        }
+
+        private var daemonsInfo = StringBuilder()
+
+        private fun updateDaemonsInfo() {
+            val process = Runtime.getRuntime().exec("jps")
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val daemons = reader.readText().lines().filter { it.contains("Daemon") }
+
+            daemonsInfo.clear()
+            for (daemon in daemons) {
+                daemonsInfo.append(daemon).append("\n")
+            }
+
+            SwingUtilities.invokeLater {
+                daemonsLabel.text = "Daemons:\n" + daemonsInfo.toString()
+                panel.revalidate()
+                panel.repaint()
             }
         }
 
