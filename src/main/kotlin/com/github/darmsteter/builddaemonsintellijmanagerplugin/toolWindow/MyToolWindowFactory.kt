@@ -17,16 +17,17 @@ import kotlin.concurrent.fixedRateTimer
 
 class MyToolWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val myToolWindow = MyToolWindow(toolWindow)
+        val myToolWindow = MyToolWindow()
         val content = ContentFactory.getInstance()
             .createContent(myToolWindow.getContent(), "Build Daemons Intellij Manager", false)
         toolWindow.contentManager.addContent(content)
     }
 
-    class MyToolWindow(private val toolWindow: ToolWindow) {
+    class MyToolWindow {
         private val panel = JPanel()
         private val layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        private val daemonsLabel = JLabel("Daemons:") // Declare the daemonsLabel here
+        private val daemonsLabel = JLabel("Daemons:")
+        private var daemonsInfo = StringBuilder()
 
         init {
             panel.layout = layout
@@ -39,7 +40,7 @@ class MyToolWindowFactory : ToolWindowFactory {
 
             panel.add(totalRAMLabel)
             panel.add(freeRAMLabel)
-            panel.add(daemonsLabel) // Add the daemonsLabel to the panel
+            panel.add(daemonsLabel)
 
             fixedRateTimer(period = 5000) {
                 val freePhysicalMemorySize = osBean.freePhysicalMemorySize
@@ -52,8 +53,6 @@ class MyToolWindowFactory : ToolWindowFactory {
             }
         }
 
-        private var daemonsInfo = StringBuilder()
-
         private fun updateDaemonsInfo() {
             val process = Runtime.getRuntime().exec("jps")
             val reader = BufferedReader(InputStreamReader(process.inputStream))
@@ -65,7 +64,7 @@ class MyToolWindowFactory : ToolWindowFactory {
             }
 
             SwingUtilities.invokeLater {
-                daemonsLabel.text = "Daemons:\n" + daemonsInfo.toString()
+                daemonsLabel.text = "Daemons:\n$daemonsInfo"
                 panel.revalidate()
                 panel.repaint()
             }
