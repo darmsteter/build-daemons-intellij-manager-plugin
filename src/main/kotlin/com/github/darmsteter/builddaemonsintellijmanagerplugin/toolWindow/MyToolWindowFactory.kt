@@ -78,11 +78,33 @@ class MyToolWindowFactory : ToolWindowFactory {
             val dialog = JDialog()
             val dialogPanel = JPanel()
             dialogPanel.add(JLabel("Details for $daemonName"))
+
+            val daemonButton = daemonsButtons[daemonName]
+            if (daemonButton != null) {
+                val daemonPid = daemonButton.actionCommand.split(" ")[0]
+                val killButton = JButton("Delete $daemonName?")
+                killButton.addActionListener {
+                    killDaemon(daemonPid)
+                    daemonsButtons.remove(daemonName)
+                    updateDaemonsInfo()
+                    dialog.isVisible = false
+                }
+                dialogPanel.add(killButton)
+            }
+
             dialog.contentPane = dialogPanel
             dialog.setSize(300, 150)
             dialog.isVisible = true
         }
 
+        private fun killDaemon(pid: String) {
+            try {
+                val process = ProcessBuilder("kill", "-9", pid).start()
+                process.waitFor()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         fun getContent() = panel
     }
 }
