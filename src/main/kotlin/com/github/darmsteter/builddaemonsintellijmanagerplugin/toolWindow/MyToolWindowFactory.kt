@@ -77,19 +77,30 @@ class MyToolWindowFactory : ToolWindowFactory {
         private fun displayDaemonInfo(daemonName: String) {
             val dialog = JDialog()
             val dialogPanel = JPanel()
-            dialogPanel.add(JLabel("Details for $daemonName"))
+            //dialogPanel.add(JLabel("Details for $daemonName"))
 
             val daemonButton = daemonsButtons[daemonName]
             if (daemonButton != null) {
                 val daemonPid = daemonButton.actionCommand.split(" ")[0]
-                val killButton = JButton("Delete $daemonName?")
+
+                val killButton = JButton("Kill process")
                 killButton.addActionListener {
-                    killDaemon(daemonPid)
+                    killDaemon(daemonPid, false)
                     daemonsButtons.remove(daemonName)
                     updateDaemonsInfo()
                     dialog.isVisible = false
                 }
+
+                val forceKillButton = JButton("Force kill process")
+                forceKillButton.addActionListener {
+                    killDaemon(daemonPid, true)
+                    daemonsButtons.remove(daemonName)
+                    updateDaemonsInfo()
+                    dialog.isVisible = false
+                }
+
                 dialogPanel.add(killButton)
+                dialogPanel.add(forceKillButton)
             }
 
             dialog.contentPane = dialogPanel
@@ -97,14 +108,16 @@ class MyToolWindowFactory : ToolWindowFactory {
             dialog.isVisible = true
         }
 
-        private fun killDaemon(pid: String) {
+        private fun killDaemon(pid: String, force: Boolean) {
             try {
-                val process = ProcessBuilder("kill", "-9", pid).start()
+                val command = if (force) "kill -9 $pid" else "kill $pid"
+                val process = ProcessBuilder("/bin/sh", "-c", command).start()
                 process.waitFor()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+
         fun getContent() = panel
     }
 }
