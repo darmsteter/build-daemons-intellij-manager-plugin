@@ -18,7 +18,8 @@ version = properties("pluginVersion").get()
 
 // Configure project's dependencies
 repositories {
-    mavenCentral()
+    maven { url = uri("https://plugins.gradle.org/m2/") }
+    maven { url = uri("https://maven.jetbrains.space/public/p/ijplatform/release") }
 }
 
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog
