@@ -20,7 +20,7 @@
         <action id="DaemonsManagerAction"
                 class="com.github.darmsteter.builddaemonsintellijmanagerplugin.DaemonsManagerAction"
                 text="Free RAM">
-            <add-to-group group-id="MainMenu" anchor="last" />
+            <add-to-group group-id="MainToolbarRight" anchor="last" />
         </action>
     </actions>
 </idea-plugin>
