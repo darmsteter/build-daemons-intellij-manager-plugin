@@ -10,14 +10,17 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.github.darmsteter.builddaemonsintellijmanagerplugin.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <actions>
-            <action id="DaemonsManagerAction"
-                    class="com.github.darmsteter.builddaemonsintellijmanagerplugin.DaemonsManagerAction"
-                    text="Daemons Manager Action" />
-        </actions>
     </extensions>
 
     <applicationListeners>
         <listener class="com.github.darmsteter.builddaemonsintellijmanagerplugin.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
+
+    <actions>
+        <action id="DaemonsManagerAction"
+                class="com.github.darmsteter.builddaemonsintellijmanagerplugin.DaemonsManagerAction"
+                text="Free RAM">
+            <add-to-group group-id="MainMenu" anchor="last" />
+        </action>
+    </actions>
 </idea-plugin>
