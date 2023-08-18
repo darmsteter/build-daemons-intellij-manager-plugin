@@ -2,7 +2,10 @@ package com.github.darmsteter.builddaemonsintellijmanagerplugin
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.sun.management.OperatingSystemMXBean
+import java.awt.Point
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.management.ManagementFactory
@@ -11,50 +14,50 @@ import javax.swing.*
 import kotlin.concurrent.fixedRateTimer
 
 class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
-    override fun actionPerformed(e: AnActionEvent) {
-        val dialog = JDialog()
-        val dialogPanel = JPanel()
-        val freeRAMLabel = JLabel()
-        val daemonsPanel = JPanel()
-        val closeButton = JButton("Close")
-
-        dialogPanel.layout = BoxLayout(dialogPanel, BoxLayout.Y_AXIS)
-
-        val decimalFormat = DecimalFormat("#.##")
+    private val daemonActions = mutableMapOf<String, AnAction>()
+    init {
         fixedRateTimer(period = 5000) {
-            updateDaemonsInfo(daemonsPanel)
-            updateRAMInfo(freeRAMLabel, decimalFormat)
+            //updateFreeRAMInfo()
+            updateDaemonActions()
+        }
+    }
+    override fun actionPerformed(e: AnActionEvent) {
+        val actionGroup = DefaultActionGroup()
+
+        for ((_, daemonAction) in daemonActions) {
+            actionGroup.add(daemonAction)
         }
 
-        closeButton.addActionListener {
-            dialog.isVisible = false
-        }
+        val popup = JBPopupFactory.getInstance()
+            .createActionGroupPopup(
+                "Daemon Actions",
+                actionGroup,
+                e.dataContext,
+                JBPopupFactory.ActionSelectionAid.NUMBERING,
+                false
+            )
 
-        dialogPanel.add(freeRAMLabel)
-        dialogPanel.add(daemonsPanel)
-        dialogPanel.add(closeButton)
-        dialog.contentPane = dialogPanel
-        dialog.setSize(400, 300)
-        dialog.isVisible = true
+        val focusOwner = e.inputEvent?.component
+        val screenLocation = focusOwner?.locationOnScreen ?: Point(0, 0)
+        popup.showInScreenCoordinates(focusOwner ?: JPanel(), screenLocation)
+
     }
 
-    private fun updateDaemonsInfo(panel: JPanel) {
+    private fun updateDaemonActions() {
         val process = Runtime.getRuntime().exec("jps")
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val daemons = reader.readText().lines().filter { it.contains("Daemon") }
 
-        panel.removeAll()
-
         for (daemon in daemons) {
-            val daemonButton = JButton(daemon)
-            daemonButton.addActionListener {
-                displayDaemonActions(daemon)
+            if (!daemonActions.containsKey(daemon)) {
+                val daemonAction = object : AnAction(daemon) {
+                    override fun actionPerformed(event: AnActionEvent) {
+                        displayDaemonActions(daemon)
+                    }
+                }
+                daemonActions[daemon] = daemonAction
             }
-            panel.add(daemonButton)
         }
-
-        panel.revalidate()
-        panel.repaint()
     }
 
     private fun updateRAMInfo(label: JLabel, decimalFormat: DecimalFormat) {
@@ -65,7 +68,7 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
     }
 
     private fun displayDaemonActions(daemonName: String) {
-        val actionsDialog = JDialog()
+        /*val actionsDialog = JDialog()
         val actionsPanel = JPanel()
         val killButton = JButton("Kill")
         val forceKillButton = JButton("Force Kill")
@@ -85,7 +88,8 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
 
         actionsDialog.contentPane = actionsPanel
         actionsDialog.setSize(200, 100)
-        actionsDialog.isVisible = true
+        actionsDialog.isVisible = true*/
+        println("Selected action for daemon: $daemonName")
     }
 
     private fun killDaemon(daemonName: String, force: Boolean) {
