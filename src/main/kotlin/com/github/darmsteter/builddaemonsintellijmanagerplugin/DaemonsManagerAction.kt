@@ -68,7 +68,7 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
     }
 
     private fun displayDaemonActions(daemonName: String) {
-        /*val actionsDialog = JDialog()
+        val actionsDialog = JDialog()
         val actionsPanel = JPanel()
         val killButton = JButton("Kill")
         val forceKillButton = JButton("Force Kill")
@@ -88,8 +88,8 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
 
         actionsDialog.contentPane = actionsPanel
         actionsDialog.setSize(200, 100)
-        actionsDialog.isVisible = true*/
-        println("Selected action for daemon: $daemonName")
+        actionsDialog.title = "Daemon Actions for $daemonName"
+        actionsDialog.isVisible = true
     }
 
     private fun killDaemon(daemonName: String, force: Boolean) {
@@ -99,6 +99,9 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
             val command = if (force) "kill -9 $daemonPid" else "kill $daemonPid"
             val process = ProcessBuilder("/bin/sh", "-c", command).start()
             process.waitFor()
+
+            daemonActions.remove(daemonName)
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
