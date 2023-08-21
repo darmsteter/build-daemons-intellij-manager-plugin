@@ -13,14 +13,17 @@ import java.text.DecimalFormat
 import javax.swing.*
 import kotlin.concurrent.fixedRateTimer
 
-class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
-    private val daemonActions = mutableMapOf<String, AnAction>()
+class DaemonsManagerAction : AnAction("Open Build Daemons Manager") {
+    @Volatile
+    private var daemonActions = mapOf<String, AnAction>()
+
     init {
         fixedRateTimer(period = 5000) {
             //updateFreeRAMInfo()
             updateDaemonActions()
         }
     }
+
     override fun actionPerformed(e: AnActionEvent) {
         val actionGroup = DefaultActionGroup()
 
@@ -40,24 +43,26 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
         val focusOwner = e.inputEvent?.component
         val screenLocation = focusOwner?.locationOnScreen ?: Point(0, 0)
         popup.showInScreenCoordinates(focusOwner ?: JPanel(), screenLocation)
-
     }
 
     private fun updateDaemonActions() {
         val process = Runtime.getRuntime().exec("jps")
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val daemons = reader.readText().lines().filter { it.contains("Daemon") }
+        val temporaryDaemonActions = mutableMapOf<String, AnAction>()
 
         for (daemon in daemons) {
-            if (!daemonActions.containsKey(daemon)) {
+            if (!temporaryDaemonActions.containsKey(daemon)) {
                 val daemonAction = object : AnAction(daemon) {
                     override fun actionPerformed(event: AnActionEvent) {
                         displayDaemonActions(daemon)
                     }
                 }
-                daemonActions[daemon] = daemonAction
+                temporaryDaemonActions[daemon] = daemonAction
             }
         }
+
+        daemonActions = temporaryDaemonActions
     }
 
     private fun updateRAMInfo(label: JLabel, decimalFormat: DecimalFormat) {
@@ -100,7 +105,7 @@ class DaemonsManagerAction : AnAction("Build daemons manager plugin") {
             val process = ProcessBuilder("/bin/sh", "-c", command).start()
             process.waitFor()
 
-            daemonActions.remove(daemonName)
+            daemonActions = daemonActions.filterKeys { it != daemonName }
 
         } catch (e: Exception) {
             e.printStackTrace()
