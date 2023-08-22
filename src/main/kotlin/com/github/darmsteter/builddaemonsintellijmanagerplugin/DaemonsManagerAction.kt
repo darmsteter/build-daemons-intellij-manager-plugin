@@ -3,6 +3,8 @@ package com.github.darmsteter.builddaemonsintellijmanagerplugin
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.sun.management.OperatingSystemMXBean
 import java.awt.Point
@@ -10,17 +12,22 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.management.ManagementFactory
 import java.text.DecimalFormat
-import javax.swing.*
+import java.util.*
+import javax.swing.JButton
+import javax.swing.JDialog
+import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import kotlin.concurrent.fixedRateTimer
 
-class DaemonsManagerAction : AnAction("Open Build Daemons Manager") {
+class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons Manager") {
     @Volatile
     private var daemonActions = mapOf<String, AnAction>()
+    private val ramPanels = Collections.synchronizedList(mutableListOf<RamPanel>())
 
     init {
         fixedRateTimer(period = 5000) {
-            //updateFreeRAMInfo()
             updateDaemonActions()
+            updateRAMInfo()
         }
     }
 
@@ -45,6 +52,16 @@ class DaemonsManagerAction : AnAction("Open Build Daemons Manager") {
         popup.showInScreenCoordinates(focusOwner ?: JPanel(), screenLocation)
     }
 
+    fun registerPanel(panel: RamPanel) {
+        ramPanels.add(panel)
+    }
+
+    fun unregisterPanel(panel: RamPanel) {
+        ramPanels.remove(panel)
+    }
+
+    override fun createCustomComponent(presentation: Presentation, place: String) = RamPanel(this, presentation, place)
+
     private fun updateDaemonActions() {
         val process = Runtime.getRuntime().exec("jps")
         val reader = BufferedReader(InputStreamReader(process.inputStream))
@@ -65,11 +82,18 @@ class DaemonsManagerAction : AnAction("Open Build Daemons Manager") {
         daemonActions = temporaryDaemonActions
     }
 
-    private fun updateRAMInfo(label: JLabel, decimalFormat: DecimalFormat) {
+    private fun updateRAMInfo() {
         val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
         val freeRAM = osBean.freePhysicalMemorySize.toDouble() / (1024 * 1024)
 
-        label.text = "Free RAM: ${decimalFormat.format(freeRAM)} MB"
+        val decimalFormat = DecimalFormat("#.##")
+        val ramInfo = "Free RAM: ${decimalFormat.format(freeRAM)} MB"
+
+        SwingUtilities.invokeLater {
+            for (panel in ramPanels) {
+                panel.label.text = ramInfo
+            }
+        }
     }
 
     private fun displayDaemonActions(daemonName: String) {
