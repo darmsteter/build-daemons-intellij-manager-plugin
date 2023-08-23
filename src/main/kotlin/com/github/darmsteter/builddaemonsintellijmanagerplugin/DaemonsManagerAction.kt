@@ -11,7 +11,6 @@ import java.awt.Point
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.management.ManagementFactory
-import java.text.DecimalFormat
 import java.util.*
 import javax.swing.JButton
 import javax.swing.JDialog
@@ -84,11 +83,12 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
 
     private fun updateRAMInfo() {
         val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
+        val totalRAM = osBean.totalPhysicalMemorySize.toDouble() / (1024 * 1024)
         val freeRAM = osBean.freePhysicalMemorySize.toDouble() / (1024 * 1024)
+        val usedRAM = totalRAM - freeRAM
+        val ramPercentage = (usedRAM / totalRAM * 100).toInt()
 
-        val decimalFormat = DecimalFormat("#.##")
-        val ramInfo = "Free RAM: ${decimalFormat.format(freeRAM)} MB"
-
+        val ramInfo = "Free RAM: ${100 - ramPercentage}%"
         SwingUtilities.invokeLater {
             for (panel in ramPanels) {
                 panel.label.text = ramInfo
