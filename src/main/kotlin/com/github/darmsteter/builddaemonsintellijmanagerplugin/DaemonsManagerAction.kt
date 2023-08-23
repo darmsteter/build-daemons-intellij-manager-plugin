@@ -37,10 +37,17 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             actionGroup.add(daemonAction)
         }
 
+        val killAllAction = createKillAllAction()
+
+        val customActionGroup = DefaultActionGroup()
+        customActionGroup.add(actionGroup)
+        customActionGroup.addSeparator()
+        customActionGroup.add(killAllAction)
+
         val popup = JBPopupFactory.getInstance()
             .createActionGroupPopup(
                 "Daemon Actions",
-                actionGroup,
+                customActionGroup,
                 e.dataContext,
                 JBPopupFactory.ActionSelectionAid.NUMBERING,
                 false
@@ -120,6 +127,24 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
         actionsDialog.title = "Daemon Actions for $daemonName"
         actionsDialog.isVisible = true
     }
+
+    private fun createKillAllAction(): AnAction {
+        return object : AnAction("Kill All") {
+            override fun actionPerformed(e: AnActionEvent) {
+                val daemonPids = daemonActions.keys.map { it.split(" ")[0] }
+                if (daemonPids.isNotEmpty()) {
+                    val command = "kill ${daemonPids.joinToString(" ")}"
+                    try {
+                        val process = ProcessBuilder("/bin/sh", "-c", command).start()
+                        process.waitFor()
+                    } catch (ex: Exception) {
+                        ex.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
 
     private fun killDaemon(daemonName: String, force: Boolean) {
         try {
