@@ -6,7 +6,7 @@ import java.awt.event.MouseEvent
 import javax.swing.JTable
 import javax.swing.table.DefaultTableModel
 
-class DaemonActionsTable(
+class DaemonTable(
     private val daemonsManagerAction: DaemonsManagerAction
 ) : JTable() {
     init {
@@ -16,15 +16,17 @@ class DaemonActionsTable(
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.clickCount == 1) {
-                    val selectedRow = selectedRow
+                    val selectedRow = rowAtPoint(e.point)
                     if (selectedRow >= 0) {
                         val daemonName = model.getValueAt(selectedRow, 0) as String
-                        daemonsManagerAction.displayDaemonActions(daemonName)
+                        val location = e.point
+                        daemonsManagerAction.displayDaemonActions(daemonName, location)
                     }
                 }
             }
         })
     }
+
 
     fun updateData(daemonActions: Map<String, AnAction>) {
         val model = this.model as DefaultTableModel

@@ -10,32 +10,29 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.management.ManagementFactory
 import java.util.*
-import javax.swing.JButton
-import javax.swing.JDialog
-import javax.swing.JPanel
-import javax.swing.SwingUtilities
+import javax.swing.*
 import kotlin.concurrent.fixedRateTimer
 
 class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons Manager") {
     @Volatile
     private var daemonActions = mapOf<String, AnAction>()
     private val ramPanels = Collections.synchronizedList(mutableListOf<RamPanel>())
-    private val daemonActionsTable = DaemonActionsTable(this)
+    private val daemonTable = DaemonTable(this)
 
     init {
         fixedRateTimer(period = 5000) {
             updateDaemonActions()
             updateRAMInfo()
-            daemonActionsTable.updateData(daemonActions)
+            daemonTable.updateData(daemonActions)
         }
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        daemonActionsTable.updateData(daemonActions)
-        val scrollPane = JBScrollPane(daemonActionsTable)
+        daemonTable.updateData(daemonActions)
+        val scrollPane = JBScrollPane(daemonTable)
 
         val popup = JBPopupFactory.getInstance()
-            .createComponentPopupBuilder(scrollPane, daemonActionsTable)
+            .createComponentPopupBuilder(scrollPane, daemonTable)
             .setResizable(true)
             .setFocusable(true)
             .setMovable(true)
@@ -64,12 +61,11 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val daemons = reader.readText().lines().filter { it.contains("Daemon") }
         val temporaryDaemonActions = mutableMapOf<String, AnAction>()
-
         for (daemon in daemons) {
             if (!temporaryDaemonActions.containsKey(daemon)) {
                 val daemonAction = object : AnAction(daemon) {
                     override fun actionPerformed(event: AnActionEvent) {
-                        displayDaemonActions(daemon)
+                        displayDaemonActions(daemon, Point(0, 0))
                     }
                 }
                 temporaryDaemonActions[daemon] = daemonAction
@@ -93,30 +89,25 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             }
         }
     }
-     fun displayDaemonActions(daemonName: String) {
-        val actionsDialog = JDialog()
-        val actionsPanel = JPanel()
-        val killButton = JButton("Kill")
-        val forceKillButton = JButton("Force Kill")
+    fun displayDaemonActions(daemonName: String, location: Point) {
+        val popupMenu = JPopupMenu()
+        val killMenuItem = JMenuItem("Kill")
+        val forceKillMenuItem = JMenuItem("Force Kill")
 
-        killButton.addActionListener {
+        killMenuItem.addActionListener {
             killDaemon(daemonName, false)
-            actionsDialog.isVisible = false
         }
 
-        forceKillButton.addActionListener {
+        forceKillMenuItem.addActionListener {
             killDaemon(daemonName, true)
-            actionsDialog.isVisible = false
         }
 
-        actionsPanel.add(killButton)
-        actionsPanel.add(forceKillButton)
+        popupMenu.add(killMenuItem)
+        popupMenu.add(forceKillMenuItem)
 
-        actionsDialog.contentPane = actionsPanel
-        actionsDialog.setSize(200, 100)
-        actionsDialog.title = "Daemon Actions for $daemonName"
-        actionsDialog.isVisible = true
+        popupMenu.show(daemonTable, location.x, location.y + daemonTable.rowHeight)
     }
+
 
     private fun createKillAllAction(): AnAction {
         return object : AnAction("Kill All") {
