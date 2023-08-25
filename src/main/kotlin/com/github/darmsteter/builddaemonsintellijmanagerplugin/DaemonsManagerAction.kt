@@ -1,11 +1,9 @@
 package com.github.darmsteter.builddaemonsintellijmanagerplugin
 
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.ui.components.JBScrollPane
 import com.sun.management.OperatingSystemMXBean
 import java.awt.Point
 import java.io.BufferedReader
@@ -31,27 +29,20 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val actionGroup = DefaultActionGroup()
-
-        for ((_, daemonAction) in daemonActions) {
-            actionGroup.add(daemonAction)
-        }
-
-        val killAllAction = createKillAllAction()
-
-        val customActionGroup = DefaultActionGroup()
-        customActionGroup.add(actionGroup)
-        customActionGroup.addSeparator()
-        customActionGroup.add(killAllAction)
+        val daemonActionsTable = DaemonActionsTable()
+        daemonActionsTable.updateData(daemonActions)
+        //val killAllAction = createKillAllAction()
+        val scrollPane = JBScrollPane(daemonActionsTable)
 
         val popup = JBPopupFactory.getInstance()
-            .createActionGroupPopup(
-                "Daemon Actions",
-                customActionGroup,
-                e.dataContext,
-                JBPopupFactory.ActionSelectionAid.NUMBERING,
-                false
-            )
+            .createComponentPopupBuilder(scrollPane, daemonActionsTable)
+            .setResizable(true)
+            .setFocusable(true)
+            .setMovable(true)
+            .setCancelOnOtherWindowOpen(true)
+            .setRequestFocus(true)
+            .setTitle("Daemons")
+            .createPopup()
 
         val focusOwner = e.inputEvent?.component
         val screenLocation = focusOwner?.locationOnScreen ?: Point(0, 0)
