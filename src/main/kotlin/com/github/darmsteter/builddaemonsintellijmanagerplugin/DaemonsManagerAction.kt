@@ -20,16 +20,17 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
     @Volatile
     private var daemonActions = mapOf<String, AnAction>()
     private val ramPanels = Collections.synchronizedList(mutableListOf<RamPanel>())
+    private val daemonActionsTable = DaemonActionsTable(this)
 
     init {
         fixedRateTimer(period = 5000) {
             updateDaemonActions()
             updateRAMInfo()
+            daemonActionsTable.updateData(daemonActions)
         }
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val daemonActionsTable = DaemonActionsTable(this)
         daemonActionsTable.updateData(daemonActions)
         val scrollPane = JBScrollPane(daemonActionsTable)
 

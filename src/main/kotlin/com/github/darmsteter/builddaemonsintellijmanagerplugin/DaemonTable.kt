@@ -28,7 +28,7 @@ class DaemonActionsTable(
 
     fun updateData(daemonActions: Map<String, AnAction>) {
         val model = this.model as DefaultTableModel
-        model.setRowCount(0)
+        model.rowCount = 0
 
         for (daemon in daemonActions) {
             val daemonName = daemon.key
