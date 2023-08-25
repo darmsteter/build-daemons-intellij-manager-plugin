@@ -29,9 +29,8 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val daemonActionsTable = DaemonActionsTable()
+        val daemonActionsTable = DaemonActionsTable(this)
         daemonActionsTable.updateData(daemonActions)
-        //val killAllAction = createKillAllAction()
         val scrollPane = JBScrollPane(daemonActionsTable)
 
         val popup = JBPopupFactory.getInstance()
@@ -93,8 +92,7 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             }
         }
     }
-
-    private fun displayDaemonActions(daemonName: String) {
+     fun displayDaemonActions(daemonName: String) {
         val actionsDialog = JDialog()
         val actionsPanel = JPanel()
         val killButton = JButton("Kill")
