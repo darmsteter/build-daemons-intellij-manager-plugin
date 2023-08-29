@@ -3,10 +3,15 @@ package com.github.darmsteter.builddaemonsintellijmanagerplugin
 import com.intellij.openapi.actionSystem.AnAction
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.text.CharacterIterator
+import java.text.StringCharacterIterator
 import java.util.*
 import javax.swing.JTable
 import javax.swing.table.DefaultTableModel
 import javax.swing.table.TableModel
+import kotlin.math.abs
 
 
 class DaemonTable(
@@ -45,20 +50,65 @@ class DaemonTable(
 
         for (daemon in daemonActions) {
             val daemonName = daemon.key
+            val pid = daemonName.split(" ")[0]
+            val processInfo = getProcessInfo(pid)
 
             val existing = model.dataVector.indexOfFirst { it[0] == daemonName }
             if (existing != -1) {
-                model.dataVector[existing][1] = "0 MB"
-                model.dataVector[existing][2] = "0.0%"
+                model.dataVector[existing][1] = processInfo.first
+                model.dataVector[existing][2] = processInfo.second
             } else {
                 model.addRow(Vector<String>().apply {
                     add(daemonName)
-                    add("0 MB")
-                    add("0.0%")
+                    add(processInfo.first)
+                    add(processInfo.second)
                 })
             }
         }
 
         model.fireTableDataChanged()
+    }
+
+    private fun getProcessInfo(pid: String): Pair<String, String> {
+        try {
+            val command = "ps -o rss=,pcpu= -p $pid"
+            val process = ProcessBuilder("/bin/sh", "-c", command).start()
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val output = reader.readLine()
+            process.waitFor()
+
+            val parts = output?.trim()?.split(" ")?.filter(String::isNotBlank) ?: emptyList()
+            if (parts.size >= 2) {
+                val ramValue = parts[0].toLongOrNull() ?: 0
+                val cpuValue = parts[1].toDoubleOrNull() ?: 0.0
+
+                val formattedRAM = String.format(humanReadableByteCountBin(ramValue * 1024))
+                val formattedCPU = String.format("%.1f %%", cpuValue)
+
+                return Pair(formattedRAM, formattedCPU)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return Pair("N/A", "N/A")
+    }
+
+    private fun humanReadableByteCountBin(bytes: Long): String {
+        val absB = if (bytes == Long.MIN_VALUE) Long.MAX_VALUE else abs(bytes.toDouble())
+            .toLong()
+        if (absB < 1024) {
+            return "$bytes B"
+        }
+        var value = absB
+        val ci: CharacterIterator = StringCharacterIterator("KMGTPE")
+        var i = 40
+        while (i >= 0 && absB > 0xfffccccccccccccL shr i) {
+            value = value shr 10
+            ci.next()
+            i -= 10
+        }
+        value *= java.lang.Long.signum(bytes).toLong()
+        return String.format("%.1f %ciB", value / 1024.0, ci.current())
     }
 }
