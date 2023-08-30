@@ -1,7 +1,11 @@
 package com.github.darmsteter.builddaemonsintellijmanagerplugin
 
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
+import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.components.JBScrollPane
 import com.sun.management.OperatingSystemMXBean
@@ -9,15 +13,15 @@ import java.awt.Point
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.management.ManagementFactory
-import java.util.*
 import javax.swing.*
 import kotlin.concurrent.fixedRateTimer
+
 
 class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons Manager") {
     @Volatile
     private var daemonActions = mapOf<String, AnAction>()
-    private val ramPanels = Collections.synchronizedList(mutableListOf<RamPanel>())
     private val daemonTable = DaemonTable(this)
+    private lateinit var ramInfoButton: ActionButtonWithText
 
     init {
         fixedRateTimer(period = 5000) {
@@ -25,6 +29,17 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             updateRAMInfo()
             daemonTable.updateData(daemonActions)
         }
+    }
+
+    override fun createCustomComponent(presentation: Presentation, place: String): JComponent {
+        if (!this::ramInfoButton.isInitialized) {
+            ramInfoButton = ActionButtonWithText(
+                this,
+                presentation,
+                place
+            ) { ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE }
+        }
+        return ramInfoButton
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -46,16 +61,6 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
         popup.showInScreenCoordinates(focusOwner ?: JPanel(), screenLocation)
     }
 
-    fun registerPanel(panel: RamPanel) {
-        ramPanels.add(panel)
-    }
-
-    fun unregisterPanel(panel: RamPanel) {
-        ramPanels.remove(panel)
-    }
-
-    override fun createCustomComponent(presentation: Presentation, place: String) = RamPanel(this, presentation, place)
-
     private fun updateDaemonActions() {
         val process = Runtime.getRuntime().exec("jps")
         val reader = BufferedReader(InputStreamReader(process.inputStream))
@@ -76,19 +81,21 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
     }
 
     private fun updateRAMInfo() {
-        val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
-        val totalRAM = osBean.totalPhysicalMemorySize.toDouble() / (1024 * 1024)
-        val freeRAM = osBean.freePhysicalMemorySize.toDouble() / (1024 * 1024)
-        val usedRAM = totalRAM - freeRAM
-        val ramPercentage = (usedRAM / totalRAM * 100).toInt()
+        if (this::ramInfoButton.isInitialized) {
+            val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
+            val totalRAM = osBean.totalPhysicalMemorySize.toDouble() / (1024 * 1024)
+            val freeRAM = osBean.freePhysicalMemorySize.toDouble() / (1024 * 1024)
+            val usedRAM = totalRAM - freeRAM
+            val ramPercentage = (usedRAM / totalRAM * 100).toInt()
 
-        val ramInfo = "Free RAM: ${100 - ramPercentage}%"
-        SwingUtilities.invokeLater {
-            for (panel in ramPanels) {
-                panel.label.text = ramInfo
+            val ramInfo = "Free RAM: ${100 - ramPercentage}%"
+            SwingUtilities.invokeLater {
+                ramInfoButton.presentation.text = ramInfo
             }
         }
     }
+
+
     fun displayDaemonActions(daemonName: String, location: Point) {
         val popupMenu = JPopupMenu()
         val killMenuItem = JMenuItem("Kill")
@@ -108,7 +115,6 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
         popupMenu.show(daemonTable, location.x, location.y + daemonTable.rowHeight)
     }
 
-
     private fun createKillAllAction(): AnAction {
         return object : AnAction("Kill All") {
             override fun actionPerformed(e: AnActionEvent) {
@@ -125,7 +131,6 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             }
         }
     }
-
 
     private fun killDaemon(daemonName: String, force: Boolean) {
         try {
