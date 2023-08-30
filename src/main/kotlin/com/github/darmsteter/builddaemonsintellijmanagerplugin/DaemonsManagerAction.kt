@@ -1,15 +1,13 @@
 package com.github.darmsteter.builddaemonsintellijmanagerplugin
 
-import com.intellij.openapi.actionSystem.ActionToolbar
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
 import com.sun.management.OperatingSystemMXBean
+import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Point
 import java.io.BufferedReader
@@ -46,10 +44,18 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
 
     override fun actionPerformed(e: AnActionEvent) {
         daemonTable.updateData(daemonActions)
-        val scrollPane = JBScrollPane(daemonTable)
+
+        val killAllButton = JButton("Kill All")
+        killAllButton.addActionListener {
+            createKillAllAction().actionPerformed(e)
+        }
+
+        val panel = JPanel(BorderLayout())
+        panel.add(JBScrollPane(daemonTable), BorderLayout.CENTER)
+        panel.add(killAllButton, BorderLayout.SOUTH)
 
         val popup = JBPopupFactory.getInstance()
-            .createComponentPopupBuilder(scrollPane, daemonTable)
+            .createComponentPopupBuilder(panel, daemonTable)
             .setResizable(true)
             .setFocusable(true)
             .setMovable(true)
@@ -64,13 +70,10 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             val relativePoint = RelativePoint(focusOwner, Point(0, focusOwner.height))
             popup.createPopup().show(relativePoint)
         } else {
-            popup.createPopup().show(RelativePoint(Point(0,0)))
-
+            popup.createPopup().showInFocusCenter()
             println("Error: focusOwner is null, unable to determine popup location")
         }
     }
-
-
 
     private fun updateDaemonActions() {
         val process = Runtime.getRuntime().exec("jps")
