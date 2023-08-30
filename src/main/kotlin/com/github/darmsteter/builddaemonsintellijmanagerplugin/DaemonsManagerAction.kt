@@ -99,16 +99,14 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
             val totalRAM = osBean.totalPhysicalMemorySize.toDouble() / (1024 * 1024)
             val freeRAM = osBean.freePhysicalMemorySize.toDouble() / (1024 * 1024)
-            val usedRAM = totalRAM - freeRAM
-            val ramPercentage = (usedRAM / totalRAM * 100).toInt()
+            val ramPercentage = ((freeRAM / totalRAM) * 100).toInt()
 
-            val ramInfo = "Free RAM: ${100 - ramPercentage}%"
+            val ramInfo = "Free RAM: $ramPercentage%"
             SwingUtilities.invokeLater {
                 ramInfoButton.presentation.text = ramInfo
             }
         }
     }
-
 
     fun displayDaemonActions(daemonName: String, location: Point) {
         val popupMenu = JPopupMenu()
