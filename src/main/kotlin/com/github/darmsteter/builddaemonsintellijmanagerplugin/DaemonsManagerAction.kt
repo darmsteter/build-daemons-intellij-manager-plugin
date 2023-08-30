@@ -7,8 +7,10 @@ import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
 import com.sun.management.OperatingSystemMXBean
+import java.awt.Dimension
 import java.awt.Point
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -54,12 +56,21 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
             .setCancelOnOtherWindowOpen(true)
             .setRequestFocus(true)
             .setTitle("Daemons")
-            .createPopup()
+            .setMinSize(Dimension(300, 200))
 
         val focusOwner = e.inputEvent?.component
-        val screenLocation = focusOwner?.locationOnScreen ?: Point(0, 0)
-        popup.showInScreenCoordinates(focusOwner ?: JPanel(), screenLocation)
+
+        if (focusOwner != null) {
+            val relativePoint = RelativePoint(focusOwner, Point(0, focusOwner.height))
+            popup.createPopup().show(relativePoint)
+        } else {
+            popup.createPopup().show(RelativePoint(Point(0,0)))
+
+            println("Error: focusOwner is null, unable to determine popup location")
+        }
     }
+
+
 
     private fun updateDaemonActions() {
         val process = Runtime.getRuntime().exec("jps")
