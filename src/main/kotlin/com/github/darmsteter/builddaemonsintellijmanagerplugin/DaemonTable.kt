@@ -17,7 +17,7 @@ import kotlin.math.abs
 class DaemonTable(
     private val daemonsManagerAction: DaemonsManagerAction
 ) : JTable() {
-    override fun createDefaultDataModel() = DefaultTableModel(arrayOf("Daemon name", "RAM", "%CPU"), 0)
+    override fun createDefaultDataModel() = DefaultTableModel(arrayOf("PID", "Daemon Name", "RAM", "%CPU"), 0)
 
     init {
         addMouseListener(object : MouseAdapter() {
@@ -25,9 +25,9 @@ class DaemonTable(
                 if (e.clickCount == 1) {
                     val selectedRow = rowAtPoint(e.point)
                     if (selectedRow >= 0) {
-                        val daemonName = model.getValueAt(selectedRow, 0) as String
+                        val daemonPid = model.getValueAt(selectedRow, 0) as String
                         val location = e.point
-                        daemonsManagerAction.displayDaemonActions(daemonName, location)
+                        daemonsManagerAction.displayDaemonActions(daemonPid, location)
                     }
                 }
             }
@@ -45,7 +45,11 @@ class DaemonTable(
     fun updateData(daemonActions: Map<String, AnAction>) {
         val model = this.model as DefaultTableModel
 
-        val rowsToRemove = model.dataVector.filterNot { it[0] in daemonActions.keys }
+        val rowsToRemove = model.dataVector.filterNot { row ->
+            val pid = row[0] as String
+            val daemonName = row[1] as String
+            daemonName in daemonActions.keys || daemonActions.keys.any { it.startsWith(pid) }
+        }
         model.dataVector.removeAll(rowsToRemove.toSet())
 
         for (daemon in daemonActions) {
@@ -53,13 +57,15 @@ class DaemonTable(
             val pid = daemonName.split(" ")[0]
             val processInfo = getProcessInfo(pid)
 
-            val existing = model.dataVector.indexOfFirst { it[0] == daemonName }
+            val existing = model.dataVector.indexOfFirst { it[0] == pid }
             if (existing != -1) {
-                model.dataVector[existing][1] = processInfo.first
-                model.dataVector[existing][2] = processInfo.second
+                model.dataVector[existing][1] = daemonName.substringAfter(' ')
+                model.dataVector[existing][2] = processInfo.first
+                model.dataVector[existing][3] = processInfo.second
             } else {
                 model.addRow(Vector<String>().apply {
-                    add(daemonName)
+                    add(pid)
+                    add(daemonName.substringAfter(' '))
                     add(processInfo.first)
                     add(processInfo.second)
                 })

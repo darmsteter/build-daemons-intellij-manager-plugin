@@ -144,15 +144,13 @@ class DaemonsManagerAction : CustomComponentAction, AnAction("Open Build Daemons
         }
     }
 
-    private fun killDaemon(daemonName: String, force: Boolean) {
+    private fun killDaemon(pid: String, force: Boolean) {
         try {
-            val daemonInfo = daemonName.split(" ")
-            val daemonPid = daemonInfo[0]
-            val command = if (force) "kill -9 $daemonPid" else "kill $daemonPid"
+            val command = if (force) "kill -9 $pid" else "kill $pid"
             val process = ProcessBuilder("/bin/sh", "-c", command).start()
             process.waitFor()
 
-            daemonActions = daemonActions.filterKeys { it != daemonName }
+            daemonActions = daemonActions.filterKeys { it.split(" ")[0] != pid }
 
         } catch (e: Exception) {
             e.printStackTrace()
